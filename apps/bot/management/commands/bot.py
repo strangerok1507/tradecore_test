@@ -44,6 +44,10 @@ class User:
         self._token = response['access']
         return response
 
+    def create_post(self, title, text):
+        data = {'title': title, 'text': text}
+        requests.post(POSTS_URL, data=data, headers=self.get_headers())
+
 
 class Command(BaseCommand):
 
