@@ -1,0 +1,53 @@
+version: '3'
+services:
+  web:
+    build: .
+    restart: always
+    container_name: tradecore_web_stage
+    volumes:
+      - .:/web
+    links:
+      - db:db
+    ports:
+      - "9000:9000"
+    expose:
+      - "9001"
+    environment:
+      - DJANGO_SETTINGS_MODULE=settings.stage
+      - PGPASSWORD=test37
+      - SECRET_KEY=
+      - PY_AUTORELOAD=1
+    command: /bin/bash -c "cd /web && make package && make migrate && invoke run_it"
+
+  db:
+    restart: always
+    container_name: tradecore_db_stage
+    image: postgres:11.1
+    environment:
+      - POSTGRES_PASSWORD=test37
+    command: postgres
+
+  celery:
+    restart: always
+    build: .
+    container_name: tradecore_celery_stage
+    environment:
+      - SECRET_KEY=
+      - DJANGO_SETTINGS_MODULE=settings.stage
+    volumes:
+      - .:/web
+    restart: unless-stopped
+    depends_on:
+      - redis
+    links:
+      - redis
+      - db
+      - web
+    command: /bin/bash -c "cd /web && make package && make migrate && make celery"
+
+  redis:
+    restart: always
+    container_name: tradecore_redis_stage
+    image: redis
+
+  

@@ -1,0 +1,74 @@
+version: '3'
+services:
+  web:
+    build: .
+    restart: always
+    container_name: tradecore_web_test
+    env_file:
+      - ./docker_env.env
+    volumes:
+      - .:/web
+    links:
+      - db:db
+    ports:
+      - "9000:9000"
+    expose:
+      - "9001"
+    environment:
+      - DJANGO_SETTINGS_MODULE=settings.test
+      - PGPASSWORD=test37
+      - SECRET_KEY= muz*pu9a(#%ctz&=jn@l^n%x)jxhu$k3pk=7jj8=%()&awubw#
+      - PY_AUTORELOAD=1
+    command: /bin/bash -c "cd /web && pip install -r requirements_dev.txt && invoke run_it"
+
+  db:
+    restart: always
+    container_name: tradecore_db_test
+    image: postgres:11.1
+    environment:
+      - POSTGRES_PASSWORD=test37
+    command: postgres
+
+  celery:
+    build: .
+    restart: always
+    container_name: tradecore_celery_test
+    environment:
+      - SECRET_KEY= muz*pu9a(#%ctz&=jn@l^n%x)jxhu$k3pk=7jj8=%()&awubw#
+      - DJANGO_SETTINGS_MODULE=settings.test
+    volumes:
+      - .:/web
+    restart: unless-stopped
+    depends_on:
+      - redis
+    links:
+      - redis
+      - db
+      - web
+    command: /bin/bash -c "cd /web && pip install -r requirements_dev.txt && make celery"
+
+  redis:
+    restart: always
+    container_name: tradecore_redis_test
+    image: redis
+
+  flower:
+    build: .
+    restart: always
+    restart: unless-stopped
+    environment:
+      - SECRET_KEY= muz*pu9a(#%ctz&=jn@l^n%x)jxhu$k3pk=7jj8=%()&awubw#
+      - DJANGO_SETTINGS_MODULE=settings.test
+    volumes:
+      - .:/web
+    ports:
+      - "5555:5555"
+    links:
+      - db
+      - redis
+    depends_on:
+      - celery
+    command:
+      /bin/bash -c "cd /web && pip install -r requirements_dev.txt && make flower"
+
+  

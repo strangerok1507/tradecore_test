@@ -1,0 +1,57 @@
+version: '3'
+services:
+  web:
+    build: .
+    container_name: tradecore_web
+    env_file:
+      - ./environments/python.env
+    volumes:
+      - .:/web
+    links:
+      - db:db
+    ports:
+      - "9000:9000"
+    command: /bin/bash -c "make dev_package && make migrate && python3 manage.py runserver 0.0.0.0:9000"
+
+  db:
+    container_name: tradecore_db
+    image: postgres:11.1
+    environment:
+      - POSTGRES_PASSWORD=test37
+    command: postgres
+
+  celery:
+    build: .
+    container_name: tradecore_celery
+    env_file:
+      - ./environments/python.env
+    volumes:
+      - .:/web
+    depends_on:
+      - redis
+    links:
+      - redis
+      - db
+      - web
+    command: /bin/bash -c "make dev_package && make migrate && make celery"
+
+  redis:
+    container_name: tradecore_redis
+    image: redis
+
+  flower:
+    build: .
+    env_file:
+      - ./environments/python.env
+    volumes:
+      - .:/web
+    ports:
+      - "5555:5555"
+    links:
+      - db
+      - redis
+    depends_on:
+      - celery
+    command: /bin/bash -c "make dev_package && make migrate && make flower"
+
+  
